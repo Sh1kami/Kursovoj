@@ -1,10 +1,52 @@
 import { useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { chooseBackup, exportBackup, restoreBackup } from '../backup';
 import { type InventoryBackup } from '../backupFormat';
 import { Action, Group, Heading, Icon, InlineError, Label, Muted, Page, layout } from '../components/ui';
 import { messageFor, useInventory } from '../hooks/useInventory';
-import { usePalette } from '../theme';
+import { usePalette, useThemePreference, type ThemePreference } from '../theme';
+
+const themes = [
+  { key: 'system', label: 'Як у системі', icon: 'iphone' },
+  { key: 'light', label: 'Світла', icon: 'sun.max' },
+  { key: 'dark', label: 'Темна', icon: 'moon' },
+] as const;
+
+function AppearanceSettings() {
+  const p = usePalette();
+  const { preference, selectTheme } = useThemePreference();
+
+  function select(next: ThemePreference) {
+    try {
+      selectTheme(next);
+    } catch {
+      Alert.alert('Не вдалося зберегти тему', 'Спробуйте вибрати її ще раз.');
+    }
+  }
+
+  return <View style={layout.stack} accessibilityRole="radiogroup" accessibilityLabel="Тема застосунку">
+    <Heading>Вигляд</Heading>
+    <Group>
+      {themes.map(({ key, label, icon }, index) => {
+        const checked = key === preference;
+        return <Pressable key={key} accessibilityRole="radio" accessibilityState={{ checked }}
+          onPress={() => select(key)}
+          style={({ pressed }) => [
+            styles.themeRow,
+            {
+              backgroundColor: pressed || checked ? p.tint : p.surface,
+              borderColor: p.line,
+              borderBottomWidth: index === themes.length - 1 ? 0 : StyleSheet.hairlineWidth,
+            },
+          ]}>
+          <Icon name={icon} />
+          <Label style={layout.grow}>{label}</Label>
+          {checked && <Icon name="checkmark" size={16} />}
+        </Pressable>;
+      })}
+    </Group>
+  </View>;
+}
 
 export function Data() {
   const p = usePalette();
@@ -55,6 +97,7 @@ export function Data() {
   }
 
   return <Page>
+    <AppearanceSettings />
     <View style={[styles.panel, { backgroundColor: p.tint }]}>
       <Icon name="internaldrive" size={27} />
       <Heading>Резервна копія</Heading>
@@ -87,6 +130,7 @@ export function Data() {
 
 const styles = StyleSheet.create({
   panel: { borderRadius: 16, gap: 8, padding: 20 },
+  themeRow: { minHeight: 52, paddingHorizontal: 16, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 12 },
   rule: { borderTopWidth: StyleSheet.hairlineWidth },
   subheading: { fontWeight: '700' },
 });

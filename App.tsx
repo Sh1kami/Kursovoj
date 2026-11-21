@@ -2,7 +2,7 @@ import { NavigationContainer, type Theme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator, type NativeStackNavigationOptions } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { Pressable, StyleSheet, useColorScheme, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Action, Empty, Icon, Label, Loading, layout } from './src/components/ui';
 import { InventoryContext, useInventoryStore } from './src/hooks/useInventory';
@@ -14,7 +14,7 @@ import { Data } from './src/screens/Data';
 import { Details, Photo } from './src/screens/Details';
 import { Home } from './src/screens/Home';
 import { ItemForm } from './src/screens/ItemForm';
-import { navigationTheme, Palette, paletteFor, usePalette } from './src/theme';
+import { AppearancePreference, navigationTheme, Palette, paletteFor, useAppearancePreference, usePalette } from './src/theme';
 
 const Root = createNativeStackNavigator<RootRoutes>();
 const Tabs = createBottomTabNavigator<TabRoutes>();
@@ -121,14 +121,17 @@ function InventoryNavigation({ theme }: { theme: Theme }) {
 }
 
 export default function App() {
-  const dark = useColorScheme() === 'dark';
+  const appearance = useAppearancePreference();
+  const { dark } = appearance;
   const palette = paletteFor(dark);
   return (
     <SafeAreaProvider style={{ backgroundColor: palette.background }}>
-      <Palette.Provider value={palette}>
-        <StatusBar style={dark ? 'light' : 'dark'} />
-        <InventoryNavigation theme={navigationTheme(dark)} />
-      </Palette.Provider>
+      <AppearancePreference.Provider value={appearance}>
+        <Palette.Provider value={palette}>
+          <StatusBar style={dark ? 'light' : 'dark'} />
+          <InventoryNavigation theme={navigationTheme(dark)} />
+        </Palette.Provider>
+      </AppearancePreference.Provider>
     </SafeAreaProvider>
   );
 }
