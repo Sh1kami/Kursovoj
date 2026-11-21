@@ -13,6 +13,7 @@ export interface Item {
   location: string;
   photoName: string | null;
   createdAt: string;
+  favorite: boolean;
 }
 
 export interface ItemInput {

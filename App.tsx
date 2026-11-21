@@ -7,10 +7,11 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Action, Empty, Icon, Label, Loading, layout } from './src/components/ui';
 import { InventoryContext, useInventoryStore } from './src/hooks/useInventory';
 import type { RootRoutes, TabRoutes } from './src/navigation';
-import { Catalog } from './src/screens/Catalog';
+import { Catalog, Favorites } from './src/screens/Catalog';
 import { Categories } from './src/screens/Categories';
 import { CategoryForm } from './src/screens/CategoryForm';
-import { Details } from './src/screens/Details';
+import { Data } from './src/screens/Data';
+import { Details, Photo } from './src/screens/Details';
 import { Home } from './src/screens/Home';
 import { ItemForm } from './src/screens/ItemForm';
 import { navigationTheme, Palette, paletteFor, usePalette } from './src/theme';
@@ -27,6 +28,7 @@ const tabInfo = {
   Home: { title: 'Огляд', icon: 'house', active: 'house.fill' },
   Catalog: { title: 'Каталог', icon: 'archivebox', active: 'archivebox.fill' },
   Categories: { title: 'Категорії', icon: 'tag', active: 'tag.fill' },
+  Data: { title: 'Дані', icon: 'internaldrive', active: 'internaldrive.fill' },
 } as const;
 
 function HomeSection() {
@@ -47,6 +49,12 @@ function CategoriesSection() {
   </Section.Navigator>;
 }
 
+function DataSection() {
+  return <Section.Navigator screenOptions={largeTitle}>
+    <Section.Screen name="DataContent" component={Data} options={{ title: 'Дані' }} />
+  </Section.Navigator>;
+}
+
 function InventoryTabs() {
   return (
     <Tabs.Navigator screenOptions={({ route }) => {
@@ -60,6 +68,7 @@ function InventoryTabs() {
       <Tabs.Screen name="Home" component={HomeSection} />
       <Tabs.Screen name="Catalog" component={CatalogSection} />
       <Tabs.Screen name="Categories" component={CategoriesSection} />
+      <Tabs.Screen name="Data" component={DataSection} />
     </Tabs.Navigator>
   );
 }
@@ -93,6 +102,8 @@ function InventoryNavigation({ theme }: { theme: Theme }) {
         <Root.Navigator screenOptions={{ headerBackButtonDisplayMode: 'minimal', headerTintColor: theme.colors.primary }}>
           <Root.Screen name="Tabs" component={InventoryTabs} options={{ headerShown: false }} />
           <Root.Screen name="Details" component={Details} options={{ title: 'Про річ' }} />
+          <Root.Screen name="Favorites" component={Favorites} options={{ title: 'Обране' }} />
+          <Root.Screen name="Photo" component={Photo} options={{ title: 'Фото речі' }} />
           <Root.Group screenOptions={({ navigation }) => ({
             presentation: 'modal',
             gestureEnabled: !busy,

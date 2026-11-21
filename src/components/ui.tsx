@@ -83,7 +83,7 @@ export function Chip({ title, selected, onPress }: { title: string; selected: bo
         { backgroundColor: selected ? p.tint : p.surface, borderColor: selected ? p.accent : p.line },
         pressed && styles.pressed]}>
       {selected && <Icon name="checkmark" size={13} />}
-      <Muted style={{ color: selected ? p.accent : p.text, fontWeight: selected ? '600' : '500' }}>{title}</Muted>
+      <Muted style={{ color: selected ? p.accent : p.text, fontWeight: selected ? '600' : '500', flexShrink: 1 }}>{title}</Muted>
     </Pressable>
   );
 }
@@ -119,9 +119,10 @@ export function Loading() {
 export function ItemRow({ item, onPress, divided }: { item: Item; onPress: () => void; divided: boolean }) {
   const p = usePalette();
   const uri = photoUri(item.photoName);
-  const secondary = item.location ? item.categoryName + ' · ' + item.location : item.categoryName;
+  const secondary = item.location ? item.categoryName + ', ' + item.location : item.categoryName;
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={item.name + ', ' + secondary}
+    <Pressable accessibilityRole="button"
+      accessibilityLabel={item.name + ', ' + secondary + (item.favorite ? ', в обраному' : '')}
       onPress={onPress} style={({ pressed }) => [
         styles.row, { borderBottomWidth: divided ? StyleSheet.hairlineWidth : 0, borderColor: p.line },
         pressed && { backgroundColor: p.tint },
@@ -130,8 +131,15 @@ export function ItemRow({ item, onPress, divided }: { item: Item; onPress: () =>
         {uri ? <Image source={{ uri }} style={StyleSheet.absoluteFill} /> : <Icon name="archivebox" />}
       </View>
       <View style={styles.rowCopy}>
-        <Label style={{ fontWeight: '600' }}>{item.name}</Label>
-        <Muted>{secondary}</Muted>
+        <View style={styles.rowTitle}>
+          <Label style={{ fontWeight: '600', flexShrink: 1 }}>{item.name}</Label>
+          {item.favorite && <Icon name="star.fill" size={13} />}
+        </View>
+        <Muted>{item.categoryName}</Muted>
+        {item.location !== '' && <View style={styles.location}>
+          <Icon name="mappin" size={12} color={p.muted} />
+          <Muted style={{ flexShrink: 1, fontSize: 13 }}>{item.location}</Muted>
+        </View>}
       </View>
       <Icon name="chevron.right" color={p.muted} size={12} />
     </Pressable>
@@ -168,5 +176,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12, padding: 16 },
   row: { minHeight: 73, padding: 12, flexDirection: 'row', gap: 12, alignItems: 'center' },
   rowCopy: { flex: 1, flexShrink: 1, gap: 3 },
-  thumbnail: { width: 47, height: 47, borderRadius: 10, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  rowTitle: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  location: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  thumbnail: { width: 56, height: 56, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
 });

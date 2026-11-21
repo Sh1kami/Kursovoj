@@ -1,17 +1,20 @@
 import { useState } from 'react';
-import { Image, StyleSheet, View } from 'react-native';
-import { launchImageLibraryAsync, type ImagePickerAsset } from 'expo-image-picker';
+import { Alert, Image, Linking, StyleSheet, View } from 'react-native';
+import { CameraType, launchCameraAsync, launchImageLibraryAsync, requestCameraPermissionsAsync,
+  type ImagePickerAsset, type ImagePickerOptions } from 'expo-image-picker';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Action, Chip, Empty, Field, Group, InlineError, Label, Muted, Page, layout } from '../components/ui';
+import { Action, Chip, Empty, Field, Group, Icon, InlineError, Label, Muted, Page, layout } from '../components/ui';
 import { limits, validateItem } from '../domain';
 import { messageFor, useInventory } from '../hooks/useInventory';
 import type { RootRoutes } from '../navigation';
 import { photoUri, removePhoto, storePhoto } from '../photos';
 import type { ItemInput } from '../types';
+import { usePalette } from '../theme';
 
 type PhotoDraft = { kind: 'existing' } | { kind: 'remove' } | { kind: 'replace'; asset: ImagePickerAsset };
 
 export function ItemForm({ route, navigation }: NativeStackScreenProps<RootRoutes, 'ItemForm'>) {
+  const p = usePalette();
   const { id } = route.params;
   const { items, categories, busy, change } = useInventory();
   const item = items.find(row => row.id === id);
@@ -27,14 +30,35 @@ export function ItemForm({ route, navigation }: NativeStackScreenProps<RootRoute
   const previous = item?.photoName ?? null;
   const preview = photo.kind === 'replace' ? photo.asset.uri : photo.kind === 'existing' ? photoUri(previous) : undefined;
 
-  async function pickPhoto() {
+  async function pickPhoto(source: 'camera' | 'library') {
     setPicking(true);
     setError('');
     try {
-      const result = await launchImageLibraryAsync({ mediaTypes: ['images'] });
+      if (source === 'camera') {
+        const permission = await requestCameraPermissionsAsync();
+        if (!permission.granted) {
+          if (!permission.canAskAgain) {
+            Alert.alert('Дозвольте доступ до камери', 'Відкрийте налаштування iPhone або виберіть готове фото з галереї.', [
+              { text: 'Гаразд', style: 'cancel' },
+              { text: 'Налаштування', onPress: () => {
+                void Linking.openSettings().catch(() => setError('Відкрийте налаштування камери на iPhone.'));
+              } },
+            ]);
+          } else {
+            setError('Для зйомки потрібен доступ до камери. Також можна вибрати фото з галереї.');
+          }
+          return;
+        }
+      }
+      const options: ImagePickerOptions = { mediaTypes: ['images'], quality: 0.72 };
+      const result = source === 'camera'
+        ? await launchCameraAsync({ ...options, cameraType: CameraType.back })
+        : await launchImageLibraryAsync(options);
       if (!result.canceled) setPhoto({ kind: 'replace', asset: result.assets[0] });
     } catch {
-      setError('Не вдалося відкрити галерею. Перевірте доступ до фото в налаштуваннях iPhone.');
+      setError(source === 'camera'
+        ? 'Не вдалося відкрити камеру. Спробуйте ще раз або виберіть фото з галереї.'
+        : 'Не вдалося відкрити галерею. Перевірте доступ до фото в налаштуваннях iPhone.');
     } finally {
       setPicking(false);
     }
@@ -67,6 +91,20 @@ export function ItemForm({ route, navigation }: NativeStackScreenProps<RootRoute
 
   return (
     <Page>
+      <Group>
+        {preview ? <Image accessibilityLabel="Вибране фото речі" accessible
+          source={{ uri: preview }} style={[styles.preview, { backgroundColor: p.tint }]} resizeMode="cover" />
+          : <View style={[styles.previewEmpty, { backgroundColor: p.tint }]}>
+            <Icon name="camera" size={24} />
+            <Label style={styles.fieldTitle}>Фото речі</Label>
+            <Muted>Необов’язково</Muted>
+          </View>}
+        <View style={styles.photoActions}>
+          <Action title="Зробити фото" action={() => pickPhoto('camera')} disabled={busy || picking} icon="camera" />
+          <Action title="Галерея" action={() => pickPhoto('library')} disabled={busy || picking} icon="photo" />
+        </View>
+        {preview && <Action title="Прибрати фото" action={() => setPhoto({ kind: 'remove' })} disabled={busy || picking} />}
+      </Group>
       <View style={layout.stack}>
         <Field label="Назва" hint="Обов’язкове поле" placeholder="Наприклад, ліхтарик" value={input.name}
           onChangeText={name => setInput(current => ({ ...current, name }))}
@@ -89,16 +127,6 @@ export function ItemForm({ route, navigation }: NativeStackScreenProps<RootRoute
           multiline maxLength={limits.description} editable={!busy} />
         <Muted>Назва й категорія обов’язкові.</Muted>
       </View>
-      <View style={layout.stack}>
-        <Label style={styles.fieldTitle}>Фото</Label>
-        {preview && <Image accessibilityLabel="Вибране фото речі" accessible
-          source={{ uri: preview }} style={styles.preview} resizeMode="cover" />}
-        <Group>
-          <Action title={picking ? 'Відкриваємо галерею…' : preview ? 'Замінити фото' : 'Вибрати фото з галереї'}
-            action={pickPhoto} disabled={busy || picking} icon="photo" />
-          {preview && <Action title="Прибрати фото" action={() => setPhoto({ kind: 'remove' })} disabled={busy || picking} />}
-        </Group>
-      </View>
       {error !== '' && <InlineError message={error} />}
       <Action title={busy ? 'Зберігаємо…' : 'Зберегти річ'} action={save}
         disabled={busy || picking || !categories.length} tone="primary" />
@@ -108,5 +136,7 @@ export function ItemForm({ route, navigation }: NativeStackScreenProps<RootRoute
 
 const styles = StyleSheet.create({
   fieldTitle: { fontSize: 15, fontWeight: '600' },
-  preview: { width: '100%', aspectRatio: 1.7, borderRadius: 14 },
+  preview: { width: '100%', aspectRatio: 1.7 },
+  previewEmpty: { minHeight: 116, justifyContent: 'center', alignItems: 'center', padding: 16, gap: 4 },
+  photoActions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 4, padding: 4 },
 });

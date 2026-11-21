@@ -33,10 +33,22 @@ export function validateItem(input: ItemInput) {
   return { name, categoryId, location, description };
 }
 
-export function filterItems(items: Item[], query: string, categoryId: number | null) {
+export type ItemSort = 'newest' | 'name' | 'location';
+const byText = new Intl.Collator('uk', { sensitivity: 'base', numeric: true });
+
+export function filterItems(items: Item[], query: string, categoryId: number | null,
+  favoritesOnly = false, sort: ItemSort = 'newest') {
   const needle = normalizeName(query);
-  return items.filter(item =>
+  const results = items.filter(item =>
     (categoryId === null || item.categoryId === categoryId) &&
-    normalizeName(item.name).includes(needle)
+    (!favoritesOnly || item.favorite) &&
+    (normalizeName(item.name).includes(needle) || normalizeName(item.location).includes(needle))
   );
+  if (sort === 'name') return results.sort((first, second) => byText.compare(first.name, second.name));
+  if (sort === 'location') return results.sort((first, second) =>
+    Number(!first.location) - Number(!second.location) ||
+    byText.compare(first.location, second.location) ||
+    byText.compare(first.name, second.name)
+  );
+  return results;
 }

@@ -9,7 +9,7 @@ export interface Database {
   transaction(work: () => Promise<void>): Promise<void>;
 }
 
-const schemaVersion = 1;
+const schemaVersion = 2;
 const starterCategories = ['Електроніка', 'Документи', 'Одяг', 'Дім'];
 
 const schema = `
@@ -40,10 +40,15 @@ export async function migrate(db: Database) {
   if (version === schemaVersion) return;
 
   await db.transaction(async () => {
-    await db.exec(schema);
-    for (const name of starterCategories) {
-      await db.run('INSERT INTO categories (name, name_key) VALUES (?, ?)', name, normalizeName(name));
+    if (version === 0) {
+      await db.exec(schema);
+      for (const name of starterCategories) {
+        await db.run('INSERT INTO categories (name, name_key) VALUES (?, ?)', name, normalizeName(name));
+      }
     }
-    await db.exec('PRAGMA user_version = 1');
+    await db.exec(`
+      ALTER TABLE items ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0 CHECK(is_favorite IN (0, 1));
+      PRAGMA user_version = 2;
+    `);
   });
 }

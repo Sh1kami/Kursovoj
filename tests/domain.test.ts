@@ -21,7 +21,7 @@ test('category validation trims names and enforces length', () => {
 });
 
 test('Ukrainian substring and category filters combine', () => {
-  const base = { categoryName: '', location: '', description: '', photoName: null, createdAt: '' };
+  const base = { categoryName: '', location: '', description: '', photoName: null, createdAt: '', favorite: false };
   const items: Item[] = [
     { ...base, id: 1, name: 'Сувенір з Їжаком', categoryId: 1 },
     { ...base, id: 2, name: 'ЇЖАК', categoryId: 2 },
@@ -33,4 +33,17 @@ test('Ukrainian substring and category filters combine', () => {
   assert.deepEqual(filterItems(items, 'єнот', null), []);
   assert.equal(normalizeName(' Об’єктив '), normalizeName("об'єктив"));
   assert.equal(normalizeName('Ї'), normalizeName('І\u0308'));
+});
+
+test('location search, favorites and sorting can be combined', () => {
+  const base = { categoryName: '', description: '', photoName: null, createdAt: '' };
+  const items: Item[] = [
+    { ...base, id: 1, name: 'Шнур 10', categoryId: 1, location: 'Шафа 2', favorite: true },
+    { ...base, id: 2, name: 'Шнур 2', categoryId: 1, location: 'Шафа 1', favorite: true },
+    { ...base, id: 3, name: 'Адаптер', categoryId: 1, location: 'Шафа 1', favorite: false },
+    { ...base, id: 4, name: 'Папка', categoryId: 2, location: '', favorite: true },
+  ];
+  assert.deepEqual(filterItems(items, 'ШАФА', 1, true, 'name').map(item => item.id), [2, 1]);
+  assert.deepEqual(filterItems(items, '', null, false, 'location').map(item => item.id), [3, 2, 1, 4]);
+  assert.deepEqual(items.map(item => item.id), [1, 2, 3, 4]);
 });

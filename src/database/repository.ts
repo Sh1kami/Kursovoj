@@ -4,6 +4,10 @@ import type { Database } from './schema.ts';
 
 const collator = new Intl.Collator('uk', { sensitivity: 'base' });
 
+type RestoreRow = Pick<Item, 'name' | 'description' | 'location' | 'photoName' | 'createdAt' | 'favorite'> & {
+  categoryIndex: number;
+};
+
 export function createRepository(db: Database) {
   async function saveCategory(input: string, id?: number) {
     const name = validateCategory(input);
@@ -53,13 +57,35 @@ export function createRepository(db: Database) {
     `);
     categories.sort((first, second) => collator.compare(first.name, second.name));
 
-    const items = await db.all<Item>(`
+    const rows = await db.all<Omit<Item, 'favorite'> & { isFavorite: 0 | 1 }>(`
       SELECT i.id, i.name, i.category_id AS categoryId, c.name AS categoryName,
-        i.description, i.location, i.photo_name AS photoName, i.created_at AS createdAt
+        i.description, i.location, i.photo_name AS photoName, i.created_at AS createdAt,
+        i.is_favorite AS isFavorite
       FROM items i JOIN categories c ON c.id = i.category_id
       ORDER BY i.created_at DESC, i.id DESC
     `);
-    return { categories, items };
+    return { categories, items: rows.map(({ isFavorite, ...item }) => ({ ...item, favorite: isFavorite === 1 })) };
+  }
+
+  async function replaceInventory(categories: string[], items: RestoreRow[]) {
+    await db.transaction(async () => {
+      await db.exec('DELETE FROM items; DELETE FROM categories;');
+      const ids: number[] = [];
+      for (const input of categories) {
+        const name = validateCategory(input);
+        const result = await db.run('INSERT INTO categories (name, name_key) VALUES (?, ?)', name, normalizeName(name));
+        ids.push(result.lastInsertRowId);
+      }
+      for (const item of items) {
+        const { name, categoryId, description, location } = validateItem({
+          ...item, categoryId: ids[item.categoryIndex] ?? null,
+        });
+        await db.run(`
+          INSERT INTO items (name, category_id, description, location, photo_name, created_at, is_favorite)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `, name, categoryId, description, location, item.photoName, item.createdAt, Number(item.favorite));
+      }
+    });
   }
 
   async function addDemoItems() {
@@ -86,7 +112,11 @@ export function createRepository(db: Database) {
   }
 
   return {
-    snapshot, saveCategory, deleteCategory, saveItem, addDemoItems,
+    snapshot, saveCategory, deleteCategory, saveItem, addDemoItems, replaceInventory,
+    async setFavorite(id: number, favorite: boolean) {
+      const result = await db.run('UPDATE items SET is_favorite = ? WHERE id = ?', Number(favorite), id);
+      if (!result.changes) throw new Error('Річ уже видалено.');
+    },
     async deleteItem(id: number) {
       await db.run('DELETE FROM items WHERE id = ?', id);
     },
