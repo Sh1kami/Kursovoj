@@ -1,0 +1,10 @@
+node_modules/
+.expo/
+dist/
+*.tsbuildinfo
+.env*
+.DS_Store
+*.docx
+*.pdf
+Codex_prompt_Особисті_речі.md
+npm-debug.log*

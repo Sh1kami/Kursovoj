@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "Особисті речі",
+    "slug": "osobysti-rechi",
+    "version": "1.0.0",
+    "platforms": [
+      "ios"
+    ],
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "com.sh1kami.osobystirechi"
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Доступ до фото потрібен, щоб додати зображення речі до каталогу.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      "expo-sqlite",
+      "expo-status-bar",
+      "expo-font"
+    ]
+  }
+}
